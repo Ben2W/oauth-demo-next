@@ -23,6 +23,7 @@ export default function Home() {
   const [userInfo, setUserInfo] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tokenInfo, setTokenInfo] = useState<any>(null);
 
   const handlePublicClient = () => {
     const authUrl = generateAuthUrl("public");
@@ -73,10 +74,104 @@ export default function Home() {
     }
   };
 
+  const handleGetTokenInfo = async (tokenType: "access" | "refresh") => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const token =
+        tokenType === "access" ? tokens.accessToken : tokens.refreshToken;
+      if (!token) {
+        throw new Error(`No ${tokenType} token available`);
+      }
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_FAPI_URL}/oauth/token_info`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({
+            token,
+            client_id: process.env.NEXT_PUBLIC_CLIENT_ID!,
+            client_secret: process.env.NEXT_PUBLIC_CLIENT_SECRET!,
+          }).toString(),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to get ${tokenType} token info`);
+      }
+
+      const info = await response.json();
+      setTokenInfo(info);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : `Failed to get ${tokenType} token info`
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRevokeToken = async (tokenType: "access" | "refresh") => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const token =
+        tokenType === "access" ? tokens.accessToken : tokens.refreshToken;
+      if (!token) {
+        throw new Error(`No ${tokenType} token available`);
+      }
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_FAPI_URL}/oauth/token/revoke`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Authorization: `Basic ${btoa(
+              `${process.env.NEXT_PUBLIC_CLIENT_ID}:${process.env.NEXT_PUBLIC_CLIENT_SECRET}`
+            )}`,
+          },
+          body: new URLSearchParams({
+            token,
+            token_type_hint: `${tokenType}_token`,
+          }).toString(),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to revoke ${tokenType} token`);
+      }
+
+      // Clear the revoked token from store
+      if (tokenType === "access") {
+        tokenStore.accessToken = "";
+      } else {
+        tokenStore.refreshToken = "";
+      }
+      setTokens({ ...tokenStore });
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : `Failed to revoke ${tokenType} token`
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogout = () => {
     resetTokenStore();
     setTokens({ ...tokenStore });
     setUserInfo(null);
+    setTokenInfo(null);
     setError(null);
   };
 
@@ -129,6 +224,34 @@ export default function Home() {
                 variant="secondary"
               >
                 Get User Info
+              </Button>
+              <Button
+                onClick={() => handleGetTokenInfo("access")}
+                disabled={loading || !tokens.accessToken}
+                variant="secondary"
+              >
+                Get Access Token Info
+              </Button>
+              <Button
+                onClick={() => handleGetTokenInfo("refresh")}
+                disabled={loading || !tokens.refreshToken}
+                variant="secondary"
+              >
+                Get Refresh Token Info
+              </Button>
+              <Button
+                onClick={() => handleRevokeToken("access")}
+                disabled={loading || !tokens.accessToken}
+                variant="destructive"
+              >
+                Revoke Access Token
+              </Button>
+              <Button
+                onClick={() => handleRevokeToken("refresh")}
+                disabled={loading || !tokens.refreshToken}
+                variant="destructive"
+              >
+                Revoke Refresh Token
               </Button>
               <Button
                 onClick={handleLogout}
@@ -184,6 +307,22 @@ export default function Home() {
                   </div>
                 )}
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {tokenInfo && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Token Introspection</CardTitle>
+              <CardDescription>
+                Detailed information about the token
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <pre className="bg-gray-100 p-2 rounded overflow-x-auto">
+                {JSON.stringify(tokenInfo, null, 2)}
+              </pre>
             </CardContent>
           </Card>
         )}
