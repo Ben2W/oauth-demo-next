@@ -143,7 +143,7 @@ export async function exchangeCodeForTokens(
 
   // For confidential clients, add client secret
   if (tokenStore.flow === "confidential") {
-    params.append("client_secret", process.env.CLIENT_SECRET!);
+    params.append("client_secret", process.env.NEXT_PUBLIC_CLIENT_SECRET!);
   }
 
   const response = await fetch(
@@ -185,7 +185,7 @@ export async function refreshAccessToken(): Promise<TokenResponse> {
 
   // For confidential clients, add client secret
   if (tokenStore.flow === "confidential") {
-    params.append("client_secret", process.env.CLIENT_SECRET!);
+    params.append("client_secret", process.env.NEXT_PUBLIC_CLIENT_SECRET!);
   }
 
   const response = await fetch(
@@ -239,7 +239,7 @@ export async function getUserInfo(): Promise<UserInfo> {
 export async function getClientCredentialsToken(): Promise<TokenResponse> {
   const params = new URLSearchParams({
     client_id: process.env.NEXT_PUBLIC_CLIENT_ID!,
-    client_secret: process.env.CLIENT_SECRET!,
+    client_secret: process.env.NEXT_PUBLIC_CLIENT_SECRET!,
     grant_type: "client_credentials",
     scope: "email profile",
   });
