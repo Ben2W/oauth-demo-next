@@ -91,11 +91,12 @@ export default function Home() {
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
+            Authorization: `Basic ${btoa(
+              `${process.env.NEXT_PUBLIC_CLIENT_ID}:${process.env.NEXT_PUBLIC_CLIENT_SECRET}`
+            )}`,
           },
           body: new URLSearchParams({
             token,
-            client_id: process.env.NEXT_PUBLIC_CLIENT_ID!,
-            client_secret: process.env.NEXT_PUBLIC_CLIENT_SECRET!,
           }).toString(),
         }
       );
