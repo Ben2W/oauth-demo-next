@@ -104,10 +104,9 @@ export function resetTokenStore() {
 }
 
 // Generate authorization URL
-export function generateAuthUrl(flow: OAuthFlow = "public") {
+export function generateAuthUrl(flow: OAuthFlow = "public", state: string) {
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = generateCodeChallenge(codeVerifier);
-  const state = generateState();
 
   // Store PKCE and state values
   tokenStore.codeVerifier = codeVerifier;

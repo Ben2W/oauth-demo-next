@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -24,28 +25,22 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tokenInfo, setTokenInfo] = useState<any>(null);
+  const [state, setState] = useState(() =>
+    Math.random().toString(36).substring(7)
+  );
 
   const handlePublicClient = () => {
-    const authUrl = generateAuthUrl("public");
+    const authUrl = generateAuthUrl("public", state);
     window.location.href = authUrl;
   };
 
   const handleConfidentialClient = () => {
-    const authUrl = generateAuthUrl("confidential");
+    const authUrl = generateAuthUrl("confidential", state);
     window.location.href = authUrl;
   };
 
-  const handleClientCredentials = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      await getClientCredentialsToken();
-      setTokens({ ...tokenStore });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setLoading(false);
-    }
+  const handleRefreshState = () => {
+    setState(Math.random().toString(36).substring(7));
   };
 
   const handleRefreshToken = async () => {
@@ -183,6 +178,26 @@ export default function Home() {
       <div className="grid gap-6 mb-8">
         <Card>
           <CardHeader>
+            <CardTitle>OAuth State</CardTitle>
+            <CardDescription>
+              The state parameter helps prevent CSRF attacks. You can edit it or
+              generate a new one.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex gap-4 items-center">
+            <Input
+              value={state}
+              onChange={(e) => setState(e.target.value)}
+              className="flex-1"
+            />
+            <Button onClick={handleRefreshState} variant="secondary">
+              Refresh State
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>OAuth Flows</CardTitle>
             <CardDescription>
               Choose an OAuth flow to test. Public client makes requests from
@@ -196,9 +211,6 @@ export default function Home() {
             </Button>
             <Button onClick={handleConfidentialClient} disabled={loading}>
               Confidential Client Flow
-            </Button>
-            <Button onClick={handleClientCredentials} disabled={loading}>
-              Client Credentials Flow
             </Button>
           </CardContent>
         </Card>
