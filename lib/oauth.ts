@@ -107,8 +107,8 @@ export function resetTokenStore() {
 export function generateAuthUrl(
   flow: OAuthFlow = "public",
   state: string,
-  codeVerifier?: string,
-  codeChallengeMethod?: "S256" | "plain",
+  codeVerifier: string,
+  codeChallengeMethod: "S256" | "plain",
   usePKCE: boolean = true
 ) {
   let finalCodeChallenge: string = "";
@@ -116,24 +116,16 @@ export function generateAuthUrl(
 
   if (usePKCE) {
     // Use provided code verifier or generate new one
-    if (codeVerifier) {
-      finalCodeVerifier = codeVerifier;
-      finalCodeChallenge =
-        codeChallengeMethod === "plain"
-          ? codeVerifier
-          : generateCodeChallenge(codeVerifier);
-    } else {
-      finalCodeVerifier = generateCodeVerifier();
-      finalCodeChallenge =
-        codeChallengeMethod === "plain"
-          ? finalCodeVerifier
-          : generateCodeChallenge(finalCodeVerifier);
-    }
+    finalCodeVerifier = codeVerifier;
+    finalCodeChallenge =
+      codeChallengeMethod === "plain"
+        ? codeVerifier
+        : generateCodeChallenge(codeVerifier);
   }
 
   // Store PKCE and state values
   tokenStore.codeVerifier = finalCodeVerifier;
-  tokenStore.state = state || "";
+  tokenStore.state = state;
   tokenStore.flow = flow;
 
   const params = new URLSearchParams({
@@ -146,7 +138,7 @@ export function generateAuthUrl(
   // Only add PKCE parameters if enabled
   if (usePKCE) {
     params.append("code_challenge", finalCodeChallenge);
-    params.append("code_challenge_method", codeChallengeMethod || "S256");
+    params.append("code_challenge_method", codeChallengeMethod);
   }
 
   // Only add state parameter if it's provided
@@ -159,22 +151,38 @@ export function generateAuthUrl(
   }/oauth/authorize?${params.toString()}`;
 }
 
-// Exchange code for tokens
-export async function exchangeCodeForTokens(
+// Helper function to generate default parameters for token exchange
+export function getDefaultTokenExchangeParams(
   code: string
-): Promise<TokenResponse> {
-  const params = new URLSearchParams({
+): Record<string, string> {
+  const params: Record<string, string> = {
     client_id: process.env.NEXT_PUBLIC_CLIENT_ID!,
     code,
     code_verifier: tokenStore.codeVerifier,
     grant_type: "authorization_code",
     redirect_uri: process.env.NEXT_PUBLIC_REDIRECT_URI!,
-  });
+  };
 
   // For confidential clients, add client secret
   if (tokenStore.flow === "confidential") {
-    params.append("client_secret", process.env.NEXT_PUBLIC_CLIENT_SECRET!);
+    params.client_secret = process.env.NEXT_PUBLIC_CLIENT_SECRET!;
   }
+
+  return params;
+}
+
+// Exchange code for tokens - now accepts Record<string, string>
+export async function exchangeCodeForTokens(
+  params: Record<string, string>
+): Promise<TokenResponse> {
+  const urlParams = new URLSearchParams();
+
+  // Add all parameters from the record
+  Object.entries(params).forEach(([key, value]) => {
+    if (value.trim() !== "") {
+      urlParams.append(key, value);
+    }
+  });
 
   const response = await fetch(
     `${process.env.NEXT_PUBLIC_FAPI_URL}/oauth/token`,
@@ -183,12 +191,19 @@ export async function exchangeCodeForTokens(
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: params.toString(),
+      body: urlParams.toString(),
     }
   );
 
   if (!response.ok) {
-    throw new Error("Failed to exchange code for tokens");
+    try {
+      const errorData = await response.json();
+      throw new Error(
+        JSON.stringify(errorData) || "Failed to exchange code for tokens"
+      );
+    } catch (parseError) {
+      throw new Error("Failed to exchange code for tokens");
+    }
   }
 
   const data = await response.json();
