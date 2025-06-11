@@ -53,6 +53,9 @@ export interface UserInfo {
 // OAuth flow types
 export type OAuthFlow = "public" | "confidential";
 
+// State management types
+export type StateMode = "enabled" | "removed";
+
 // Store for tokens (using localStorage)
 export const tokenStore = {
   get accessToken() {
@@ -85,6 +88,12 @@ export const tokenStore = {
   set state(value: string) {
     localStorage.setItem("oauth_state", value);
   },
+  get stateMode() {
+    return (localStorage.getItem("oauth_state_mode") || "enabled") as StateMode;
+  },
+  set stateMode(value: StateMode) {
+    localStorage.setItem("oauth_state_mode", value);
+  },
   get flow() {
     return (localStorage.getItem("oauth_flow") || "public") as OAuthFlow;
   },
@@ -100,7 +109,41 @@ export function resetTokenStore() {
   localStorage.removeItem("oauth_id_token");
   localStorage.removeItem("oauth_code_verifier");
   localStorage.removeItem("oauth_state");
+  localStorage.removeItem("oauth_state_mode");
   localStorage.removeItem("oauth_flow");
+}
+
+// State management functions
+export function initializeState(): string {
+  // If state was explicitly removed, don't generate a new one
+  if (tokenStore.stateMode === "removed") {
+    return "";
+  }
+
+  const existingState = tokenStore.state;
+  if (existingState) {
+    return existingState;
+  }
+  const newState = generateState();
+  tokenStore.state = newState;
+  tokenStore.stateMode = "enabled";
+  return newState;
+}
+
+export function refreshState(): string {
+  const newState = generateState();
+  tokenStore.state = newState;
+  tokenStore.stateMode = "enabled";
+  return newState;
+}
+
+export function removeState(): void {
+  tokenStore.state = "";
+  tokenStore.stateMode = "removed";
+}
+
+export function isStateRemoved(): boolean {
+  return tokenStore.stateMode === "removed";
 }
 
 // Generate authorization URL
@@ -141,10 +184,54 @@ export function generateAuthUrl(
     params.append("code_challenge_method", codeChallengeMethod);
   }
 
-  // Only add state parameter if it's provided
-  if (state !== "") {
+  // Handle state parameter based on mode
+  if (!isStateRemoved()) {
+    // If state is not removed, add it (even if empty string)
     params.append("state", state);
   }
+  // If state is removed, don't add the parameter at all
+
+  return `${
+    process.env.NEXT_PUBLIC_FAPI_URL
+  }/oauth/authorize?${params.toString()}`;
+}
+
+// Generate preview URL for display purposes
+export function generateAuthUrlPreview(
+  flow: OAuthFlow = "public",
+  state: string,
+  codeVerifier: string,
+  codeChallengeMethod: "S256" | "plain",
+  usePKCE: boolean = true
+): string {
+  let finalCodeChallenge: string = "";
+
+  if (usePKCE) {
+    finalCodeChallenge =
+      codeChallengeMethod === "plain"
+        ? codeVerifier
+        : generateCodeChallenge(codeVerifier);
+  }
+
+  const params = new URLSearchParams({
+    response_type: "code",
+    client_id: process.env.NEXT_PUBLIC_CLIENT_ID!,
+    redirect_uri: process.env.NEXT_PUBLIC_REDIRECT_URI!,
+    scope: "email profile",
+  });
+
+  // Only add PKCE parameters if enabled
+  if (usePKCE) {
+    params.append("code_challenge", finalCodeChallenge);
+    params.append("code_challenge_method", codeChallengeMethod);
+  }
+
+  // Handle state parameter based on mode
+  if (!isStateRemoved()) {
+    // If state is not removed, add it (even if empty string)
+    params.append("state", state);
+  }
+  // If state is removed, don't add the parameter at all
 
   return `${
     process.env.NEXT_PUBLIC_FAPI_URL

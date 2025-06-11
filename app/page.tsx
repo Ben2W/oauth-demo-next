@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,27 +10,39 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { RefreshCw, X } from "lucide-react";
+import { Plus, RefreshCw, X } from "lucide-react";
 import {
   generateAuthUrl,
-  getClientCredentialsToken,
+  generateAuthUrlPreview,
   tokenStore,
   refreshAccessToken,
   getUserInfo,
   resetTokenStore,
   generateCodeVerifier,
   generateCodeChallenge,
+  initializeState,
+  refreshState,
+  removeState,
+  isStateRemoved,
 } from "@/lib/oauth";
 
 export default function Home() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  return mounted ? <HomePage /> : <>smh nextjs</>;
+}
+
+function HomePage() {
   const [tokens, setTokens] = useState(tokenStore);
   const [userInfo, setUserInfo] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tokenInfo, setTokenInfo] = useState<any>(null);
-  const [state, setState] = useState(() =>
-    Math.random().toString(36).substring(7)
-  );
+  const [state, setState] = useState("");
+  const [stateRemoved, setStateRemoved] = useState(isStateRemoved());
   const [codeVerifier, setCodeVerifier] = useState(() =>
     generateCodeVerifier()
   );
@@ -38,6 +50,13 @@ export default function Home() {
     "S256" | "plain"
   >("S256");
   const [usePKCE, setUsePKCE] = useState(true);
+
+  // Initialize state from localStorage on component mount
+  useEffect(() => {
+    const initialState = initializeState();
+    setState(initialState);
+    setStateRemoved(isStateRemoved());
+  }, []);
 
   const handlePublicClient = () => {
     const authUrl = generateAuthUrl(
@@ -62,11 +81,22 @@ export default function Home() {
   };
 
   const handleRefreshState = () => {
-    setState(Math.random().toString(36).substring(7));
+    const newState = refreshState();
+    setState(newState);
+    setStateRemoved(false);
   };
 
   const handleRemoveState = () => {
+    removeState();
     setState("");
+    setStateRemoved(true);
+  };
+
+  const handleStateChange = (value: string) => {
+    setState(value);
+    tokenStore.state = value;
+    tokenStore.stateMode = "enabled";
+    setStateRemoved(false);
   };
 
   const handleGenerateCodeVerifier = () => {
@@ -219,24 +249,33 @@ export default function Home() {
             <CardTitle>OAuth State</CardTitle>
             <CardDescription>
               The state parameter helps prevent CSRF attacks. You can edit it,
-              generate a new one, or remove it entirely (it's optional).
+              generate a new one, or remove it entirely.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex gap-4 items-center">
-            <Input
-              value={state}
-              onChange={(e) => setState(e.target.value)}
-              placeholder={state === "" ? "No state parameter (optional)" : ""}
-              className="flex-1"
-            />
-            <Button onClick={handleRefreshState} variant="secondary">
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Refresh State
-            </Button>
-            <Button onClick={handleRemoveState} variant="secondary">
-              <X className="mr-2 h-4 w-4" />
-              Remove State
-            </Button>
+            {stateRemoved ? (
+              <Button onClick={handleRefreshState}>
+                <Plus className="mr-2 h-4 w-full" />
+                Add State
+              </Button>
+            ) : (
+              <>
+                <Input
+                  value={state}
+                  onChange={(e) => handleStateChange(e.target.value)}
+                  placeholder="Enter state value"
+                  className="flex-1"
+                />
+                <Button onClick={handleRefreshState} variant="secondary">
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Refresh State
+                </Button>
+                <Button onClick={handleRemoveState} variant="secondary">
+                  <X className="mr-2 h-4 w-4" />
+                  Remove State
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -331,6 +370,27 @@ export default function Home() {
                 </div>
               </>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>OAuth Authorization URL Preview</CardTitle>
+            <CardDescription>
+              This is the URL that will be used for the OAuth authorization
+              request
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-gray-100 p-3 rounded font-mono text-sm overflow-x-auto break-all">
+              {generateAuthUrlPreview(
+                "public", // Default to public for preview
+                state,
+                codeVerifier,
+                codeChallengeMethod,
+                usePKCE
+              )}
+            </div>
           </CardContent>
         </Card>
 

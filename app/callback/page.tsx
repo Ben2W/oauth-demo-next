@@ -16,6 +16,7 @@ import {
   exchangeCodeForTokens,
   tokenStore,
   getDefaultTokenExchangeParams,
+  isStateRemoved,
 } from "@/lib/oauth";
 
 export default function Callback() {
@@ -47,12 +48,25 @@ export default function Callback() {
       return;
     }
 
-    if (state !== tokenStore.state) {
-      setError(
-        `State parameter mismatch. Received: ${state}, Expected: ${tokenStore.state}`
-      );
-      setLoading(false);
-      return;
+    // Handle state validation based on whether state was removed
+    if (isStateRemoved()) {
+      // If state was removed, we shouldn't receive a state parameter
+      if (state !== null) {
+        setError(
+          `Unexpected state parameter received. State was removed but received: ${state}`
+        );
+        setLoading(false);
+        return;
+      }
+    } else {
+      // If state was not removed, validate it matches
+      if (state !== tokenStore.state) {
+        setError(
+          `State parameter mismatch. Received: ${state}, Expected: ${tokenStore.state}`
+        );
+        setLoading(false);
+        return;
+      }
     }
 
     // Set up default parameters and show form
