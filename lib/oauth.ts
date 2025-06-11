@@ -110,7 +110,7 @@ export function generateAuthUrl(flow: OAuthFlow = "public", state: string) {
 
   // Store PKCE and state values
   tokenStore.codeVerifier = codeVerifier;
-  tokenStore.state = state;
+  tokenStore.state = state || "";
   tokenStore.flow = flow;
 
   const params = new URLSearchParams({
@@ -118,10 +118,14 @@ export function generateAuthUrl(flow: OAuthFlow = "public", state: string) {
     client_id: process.env.NEXT_PUBLIC_CLIENT_ID!,
     redirect_uri: process.env.NEXT_PUBLIC_REDIRECT_URI!,
     scope: "email profile",
-    state,
     code_challenge: codeChallenge,
     code_challenge_method: "S256",
   });
+
+  // Only add state parameter if it's provided
+  if (state !== "") {
+    params.append("state", state);
+  }
 
   return `${
     process.env.NEXT_PUBLIC_FAPI_URL

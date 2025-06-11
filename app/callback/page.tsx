@@ -18,9 +18,9 @@ export default function Callback() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const code = searchParams.get("code");
-    const state = searchParams.get("state");
-    const error = searchParams.get("error");
+    const code = searchParams?.get("code");
+    const state = searchParams?.get("state");
+    const error = searchParams?.get("error");
 
     if (error) {
       setError(`OAuth error: ${error}`);
@@ -28,8 +28,8 @@ export default function Callback() {
       return;
     }
 
-    if (!code || !state) {
-      setError("Missing code or state parameter");
+    if (!code) {
+      setError("Missing code");
       setLoading(false);
       return;
     }

@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { RefreshCw, X } from "lucide-react";
 import {
   generateAuthUrl,
   getClientCredentialsToken,
@@ -41,6 +42,10 @@ export default function Home() {
 
   const handleRefreshState = () => {
     setState(Math.random().toString(36).substring(7));
+  };
+
+  const handleRemoveState = () => {
+    setState("");
   };
 
   const handleRefreshToken = async () => {
@@ -180,18 +185,24 @@ export default function Home() {
           <CardHeader>
             <CardTitle>OAuth State</CardTitle>
             <CardDescription>
-              The state parameter helps prevent CSRF attacks. You can edit it or
-              generate a new one.
+              The state parameter helps prevent CSRF attacks. You can edit it,
+              generate a new one, or remove it entirely (it's optional).
             </CardDescription>
           </CardHeader>
           <CardContent className="flex gap-4 items-center">
             <Input
               value={state}
               onChange={(e) => setState(e.target.value)}
+              placeholder={state === "" ? "No state parameter (optional)" : ""}
               className="flex-1"
             />
             <Button onClick={handleRefreshState} variant="secondary">
+              <RefreshCw className="mr-2 h-4 w-4" />
               Refresh State
+            </Button>
+            <Button onClick={handleRemoveState} variant="secondary">
+              <X className="mr-2 h-4 w-4" />
+              Remove State
             </Button>
           </CardContent>
         </Card>
