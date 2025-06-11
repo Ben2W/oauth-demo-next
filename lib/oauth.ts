@@ -104,12 +104,35 @@ export function resetTokenStore() {
 }
 
 // Generate authorization URL
-export function generateAuthUrl(flow: OAuthFlow = "public", state: string) {
-  const codeVerifier = generateCodeVerifier();
-  const codeChallenge = generateCodeChallenge(codeVerifier);
+export function generateAuthUrl(
+  flow: OAuthFlow = "public",
+  state: string,
+  codeVerifier?: string,
+  codeChallengeMethod?: "S256" | "plain",
+  usePKCE: boolean = true
+) {
+  let finalCodeChallenge: string = "";
+  let finalCodeVerifier: string = "";
+
+  if (usePKCE) {
+    // Use provided code verifier or generate new one
+    if (codeVerifier) {
+      finalCodeVerifier = codeVerifier;
+      finalCodeChallenge =
+        codeChallengeMethod === "plain"
+          ? codeVerifier
+          : generateCodeChallenge(codeVerifier);
+    } else {
+      finalCodeVerifier = generateCodeVerifier();
+      finalCodeChallenge =
+        codeChallengeMethod === "plain"
+          ? finalCodeVerifier
+          : generateCodeChallenge(finalCodeVerifier);
+    }
+  }
 
   // Store PKCE and state values
-  tokenStore.codeVerifier = codeVerifier;
+  tokenStore.codeVerifier = finalCodeVerifier;
   tokenStore.state = state || "";
   tokenStore.flow = flow;
 
@@ -118,9 +141,13 @@ export function generateAuthUrl(flow: OAuthFlow = "public", state: string) {
     client_id: process.env.NEXT_PUBLIC_CLIENT_ID!,
     redirect_uri: process.env.NEXT_PUBLIC_REDIRECT_URI!,
     scope: "email profile",
-    code_challenge: codeChallenge,
-    code_challenge_method: "S256",
   });
+
+  // Only add PKCE parameters if enabled
+  if (usePKCE) {
+    params.append("code_challenge", finalCodeChallenge);
+    params.append("code_challenge_method", codeChallengeMethod || "S256");
+  }
 
   // Only add state parameter if it's provided
   if (state !== "") {

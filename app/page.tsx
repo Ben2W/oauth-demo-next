@@ -18,6 +18,8 @@ import {
   refreshAccessToken,
   getUserInfo,
   resetTokenStore,
+  generateCodeVerifier,
+  generateCodeChallenge,
 } from "@/lib/oauth";
 
 export default function Home() {
@@ -29,14 +31,33 @@ export default function Home() {
   const [state, setState] = useState(() =>
     Math.random().toString(36).substring(7)
   );
+  const [codeVerifier, setCodeVerifier] = useState(() =>
+    generateCodeVerifier()
+  );
+  const [codeChallengeMethod, setCodeChallengeMethod] = useState<
+    "S256" | "plain"
+  >("S256");
+  const [usePKCE, setUsePKCE] = useState(true);
 
   const handlePublicClient = () => {
-    const authUrl = generateAuthUrl("public", state);
+    const authUrl = generateAuthUrl(
+      "public",
+      state,
+      codeVerifier,
+      codeChallengeMethod,
+      usePKCE
+    );
     window.location.href = authUrl;
   };
 
   const handleConfidentialClient = () => {
-    const authUrl = generateAuthUrl("confidential", state);
+    const authUrl = generateAuthUrl(
+      "confidential",
+      state,
+      codeVerifier,
+      codeChallengeMethod,
+      usePKCE
+    );
     window.location.href = authUrl;
   };
 
@@ -46,6 +67,18 @@ export default function Home() {
 
   const handleRemoveState = () => {
     setState("");
+  };
+
+  const handleGenerateCodeVerifier = () => {
+    const verifier = generateCodeVerifier();
+    setCodeVerifier(verifier);
+  };
+
+  const handleCodeChallengeMethodChange = (method: "S256" | "plain") => {
+    setCodeChallengeMethod(method);
+    // Generate new verifier when method changes
+    const verifier = generateCodeVerifier();
+    setCodeVerifier(verifier);
   };
 
   const handleRefreshToken = async () => {
@@ -204,6 +237,100 @@ export default function Home() {
               <X className="mr-2 h-4 w-4" />
               Remove State
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>PKCE Parameters</CardTitle>
+            <CardDescription>
+              PKCE (Proof Key for Code Exchange) parameters help secure the
+              OAuth flow. You can disable PKCE entirely or customize the
+              parameters. S256 uses SHA256 hashing, while plain sends the
+              verifier directly.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                PKCE Status
+              </label>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setUsePKCE(true)}
+                  variant={usePKCE ? "default" : "outline"}
+                  size="sm"
+                >
+                  Enabled
+                </Button>
+                <Button
+                  onClick={() => setUsePKCE(false)}
+                  variant={!usePKCE ? "default" : "outline"}
+                  size="sm"
+                >
+                  Disabled
+                </Button>
+              </div>
+            </div>
+            {usePKCE && (
+              <>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">
+                    Code Challenge Method
+                  </label>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => handleCodeChallengeMethodChange("S256")}
+                      variant={
+                        codeChallengeMethod === "S256" ? "default" : "outline"
+                      }
+                      size="sm"
+                    >
+                      S256
+                    </Button>
+                    <Button
+                      onClick={() => handleCodeChallengeMethodChange("plain")}
+                      variant={
+                        codeChallengeMethod === "plain" ? "default" : "outline"
+                      }
+                      size="sm"
+                    >
+                      plain
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">
+                    Code Verifier
+                  </label>
+                  <div className="flex gap-4 items-center">
+                    <Input
+                      value={codeVerifier}
+                      onChange={(e) => setCodeVerifier(e.target.value)}
+                      placeholder="Code verifier"
+                      className="flex-1 font-mono text-sm"
+                    />
+                    <Button
+                      onClick={handleGenerateCodeVerifier}
+                      variant="secondary"
+                    >
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Generate
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">
+                    Code Challenge (derived)
+                  </label>
+                  <div className="bg-gray-100 p-2 rounded font-mono text-sm overflow-x-auto">
+                    {codeChallengeMethod === "plain"
+                      ? codeVerifier
+                      : generateCodeChallenge(codeVerifier)}
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
