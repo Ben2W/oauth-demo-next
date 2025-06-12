@@ -12,6 +12,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/alert";
+import { CheckIcon, XIcon } from "lucide-react";
 import {
   exchangeCodeForTokens,
   tokenStore,
@@ -162,9 +165,9 @@ export default function Callback() {
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-muted">
-        <Card className="w-full max-w-lg shadow-lg">
-          <CardContent className="pt-8 pb-8 flex flex-col items-center">
-            <p className="text-lg text-muted-foreground font-medium">
+        <Card className="w-full max-w-lg">
+          <CardContent className="py-8 text-center">
+            <p className="text-lg text-muted-foreground">
               Processing OAuth callback...
             </p>
           </CardContent>
@@ -176,7 +179,7 @@ export default function Callback() {
   if (error) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-muted">
-        <Card className="w-full max-w-lg border border-red-500 shadow-lg">
+        <Card className="w-full max-w-lg border-red-500">
           <CardHeader>
             <CardTitle className="text-red-600">Error</CardTitle>
             <CardDescription className="text-red-400">
@@ -192,26 +195,42 @@ export default function Callback() {
   }
 
   if (showForm) {
+    const state = searchParams?.get("state");
+
     return (
-      <main className="flex min-h-screen items-center justify-center bg-muted">
-        <Card className="w-full max-w-2xl shadow-lg">
+      <main className="flex min-h-screen items-center justify-center bg-muted ">
+        <Card className="w-full max-w-2xl p-4">
           <CardHeader>
-            <CardTitle className="text-xl font-semibold">
-              Customize Token Exchange
-            </CardTitle>
-            <CardDescription className="text-muted-foreground">
+            <CardTitle>Customize Token Exchange</CardTitle>
+            <CardDescription>
               Review and modify the parameters that will be sent to exchange the
               authorization code for tokens
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <Alert className="flex items-center gap-3 mb-4">
+              <span className="text-sm font-medium">State Parameter:</span>
+              {state !== null ? (
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-green-500 text-white">
+                    <CheckIcon className="w-3 h-3 mr-1" />
+                    Included
+                  </Badge>
+                  <code className="text-xs bg-muted px-2 py-1 rounded break-all overflow-wrap-anywhere">
+                    "{state}"
+                  </code>
+                </div>
+              ) : (
+                <Badge className="bg-red-500 text-white">
+                  <XIcon className="w-3 h-3 mr-1" />
+                  Not Included
+                </Badge>
+              )}
+            </Alert>
+
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full sm:w-auto"
-                >
+              <div className="flex gap-2">
+                <Button type="submit" disabled={submitting}>
                   {submitting ? "Exchanging..." : "Exchange Tokens"}
                 </Button>
                 <Button
@@ -219,7 +238,6 @@ export default function Callback() {
                   variant={hasChanges() ? "destructive" : "secondary"}
                   onClick={handleRevert}
                   disabled={!hasChanges() || submitting}
-                  className="w-full sm:w-auto"
                 >
                   Revert to Defaults
                 </Button>
@@ -227,34 +245,19 @@ export default function Callback() {
 
               <div className="space-y-4">
                 {Object.entries(params).map(([key, value]) => (
-                  <div
-                    key={key}
-                    className="flex flex-col sm:flex-row sm:items-end gap-2"
-                  >
+                  <div key={key} className="flex gap-2">
                     <div className="flex-1 grid grid-cols-2 gap-2">
                       <div>
-                        <Label
-                          htmlFor={`key-${key}`}
-                          className="text-sm font-medium"
-                        >
-                          Parameter Name
-                        </Label>
+                        <Label htmlFor={`key-${key}`}>Parameter Name</Label>
                         <Input
                           id={`key-${key}`}
                           value={key}
                           onChange={(e) => handleKeyChange(key, e.target.value)}
                           placeholder="Parameter name"
-                          className="mt-1"
-                          autoComplete="off"
                         />
                       </div>
                       <div>
-                        <Label
-                          htmlFor={`value-${key}`}
-                          className="text-sm font-medium"
-                        >
-                          Parameter Value
-                        </Label>
+                        <Label htmlFor={`value-${key}`}>Parameter Value</Label>
                         <Input
                           id={`value-${key}`}
                           value={value}
@@ -262,8 +265,6 @@ export default function Callback() {
                             handleParamChange(key, e.target.value)
                           }
                           placeholder="Parameter value"
-                          className="mt-1"
-                          autoComplete="off"
                         />
                       </div>
                     </div>
@@ -272,7 +273,7 @@ export default function Callback() {
                       variant="outline"
                       size="sm"
                       onClick={() => handleRemoveParam(key)}
-                      className="sm:mt-0 mt-1"
+                      className="self-end"
                     >
                       Remove
                     </Button>
@@ -285,7 +286,6 @@ export default function Callback() {
                   type="button"
                   variant="outline"
                   onClick={handleAddParam}
-                  className="w-full sm:w-auto"
                 >
                   Add Parameter
                 </Button>
