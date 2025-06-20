@@ -151,13 +151,13 @@ export function generateAuthUrl(
   flow: OAuthFlow = "public",
   state: string,
   codeVerifier: string,
-  codeChallengeMethod: "S256" | "plain",
+  codeChallengeMethod: "S256" | "plain" | "omit",
   usePKCE: boolean = true
 ) {
   let finalCodeChallenge: string = "";
   let finalCodeVerifier: string = "";
 
-  if (usePKCE) {
+  if (usePKCE && codeChallengeMethod !== "omit") {
     // Use provided code verifier or generate new one
     finalCodeVerifier = codeVerifier;
     finalCodeChallenge =
@@ -178,8 +178,8 @@ export function generateAuthUrl(
     scope: "email profile",
   });
 
-  // Only add PKCE parameters if enabled
-  if (usePKCE) {
+  // Only add PKCE parameters if enabled and not omitted
+  if (usePKCE && codeChallengeMethod !== "omit") {
     params.append("code_challenge", finalCodeChallenge);
     params.append("code_challenge_method", codeChallengeMethod);
   }
@@ -201,12 +201,12 @@ export function generateAuthUrlPreview(
   flow: OAuthFlow = "public",
   state: string,
   codeVerifier: string,
-  codeChallengeMethod: "S256" | "plain",
+  codeChallengeMethod: "S256" | "plain" | "omit",
   usePKCE: boolean = true
 ): string {
   let finalCodeChallenge: string = "";
 
-  if (usePKCE) {
+  if (usePKCE && codeChallengeMethod !== "omit") {
     finalCodeChallenge =
       codeChallengeMethod === "plain"
         ? codeVerifier
@@ -220,8 +220,8 @@ export function generateAuthUrlPreview(
     scope: "email profile",
   });
 
-  // Only add PKCE parameters if enabled
-  if (usePKCE) {
+  // Only add PKCE parameters if enabled and not omitted
+  if (usePKCE && codeChallengeMethod !== "omit") {
     params.append("code_challenge", finalCodeChallenge);
     params.append("code_challenge_method", codeChallengeMethod);
   }

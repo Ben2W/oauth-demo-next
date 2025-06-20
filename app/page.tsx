@@ -47,7 +47,7 @@ function HomePage() {
     generateCodeVerifier()
   );
   const [codeChallengeMethod, setCodeChallengeMethod] = useState<
-    "S256" | "plain"
+    "S256" | "plain" | "omit"
   >("S256");
   const [usePKCE, setUsePKCE] = useState(true);
 
@@ -104,11 +104,15 @@ function HomePage() {
     setCodeVerifier(verifier);
   };
 
-  const handleCodeChallengeMethodChange = (method: "S256" | "plain") => {
+  const handleCodeChallengeMethodChange = (
+    method: "S256" | "plain" | "omit"
+  ) => {
     setCodeChallengeMethod(method);
-    // Generate new verifier when method changes
-    const verifier = generateCodeVerifier();
-    setCodeVerifier(verifier);
+    // Generate new verifier when method changes (except for omit)
+    if (method !== "omit") {
+      const verifier = generateCodeVerifier();
+      setCodeVerifier(verifier);
+    }
   };
 
   const handleRefreshToken = async () => {
@@ -336,6 +340,17 @@ function HomePage() {
                     >
                       plain
                     </Button>
+                    <Button
+                      onClick={() => handleCodeChallengeMethodChange("omit")}
+                      variant={
+                        codeChallengeMethod === "omit"
+                          ? "destructive"
+                          : "outline"
+                      }
+                      size="sm"
+                    >
+                      omit
+                    </Button>
                   </div>
                 </div>
                 <div>
@@ -348,10 +363,12 @@ function HomePage() {
                       onChange={(e) => setCodeVerifier(e.target.value)}
                       placeholder="Code verifier"
                       className="flex-1 font-mono text-sm"
+                      disabled={codeChallengeMethod === "omit"}
                     />
                     <Button
                       onClick={handleGenerateCodeVerifier}
                       variant="secondary"
+                      disabled={codeChallengeMethod === "omit"}
                     >
                       <RefreshCw className="mr-2 h-4 w-4" />
                       Generate
@@ -363,7 +380,9 @@ function HomePage() {
                     Code Challenge (derived)
                   </label>
                   <div className="bg-gray-100 p-2 rounded font-mono text-sm overflow-x-auto">
-                    {codeChallengeMethod === "plain"
+                    {codeChallengeMethod === "omit"
+                      ? "No code challenge (omitted)"
+                      : codeChallengeMethod === "plain"
                       ? codeVerifier
                       : generateCodeChallenge(codeVerifier)}
                   </div>
