@@ -50,12 +50,23 @@ function HomePage() {
     "S256" | "plain" | "omit"
   >("S256");
   const [usePKCE, setUsePKCE] = useState(true);
+  const [prompt, setPrompt] = useState(tokenStore.prompt);
+  const [selectedPrompts, setSelectedPrompts] = useState<Set<string>>(
+    new Set()
+  );
 
   // Initialize state from localStorage on component mount
   useEffect(() => {
     const initialState = initializeState();
     setState(initialState);
     setStateRemoved(isStateRemoved());
+    setPrompt(tokenStore.prompt);
+
+    // Initialize selected prompts from stored prompt value
+    if (tokenStore.prompt) {
+      const prompts = tokenStore.prompt.split(" ").filter((p) => p.trim());
+      setSelectedPrompts(new Set(prompts));
+    }
   }, []);
 
   const handlePublicClient = () => {
@@ -64,7 +75,8 @@ function HomePage() {
       state,
       codeVerifier,
       codeChallengeMethod,
-      usePKCE
+      usePKCE,
+      prompt
     );
     window.location.href = authUrl;
   };
@@ -75,7 +87,8 @@ function HomePage() {
       state,
       codeVerifier,
       codeChallengeMethod,
-      usePKCE
+      usePKCE,
+      prompt
     );
     window.location.href = authUrl;
   };
@@ -112,6 +125,36 @@ function HomePage() {
     if (method !== "omit") {
       const verifier = generateCodeVerifier();
       setCodeVerifier(verifier);
+    }
+  };
+
+  const handlePromptToggle = (promptValue: string) => {
+    const newSelectedPrompts = new Set(selectedPrompts);
+
+    if (newSelectedPrompts.has(promptValue)) {
+      newSelectedPrompts.delete(promptValue);
+    } else {
+      newSelectedPrompts.add(promptValue);
+    }
+
+    setSelectedPrompts(newSelectedPrompts);
+
+    // Combine selected prompts into a space-separated string
+    const combinedPrompt = Array.from(newSelectedPrompts).sort().join(" ");
+    setPrompt(combinedPrompt);
+    tokenStore.prompt = combinedPrompt;
+  };
+
+  const handlePromptChange = (value: string) => {
+    setPrompt(value);
+    tokenStore.prompt = value;
+
+    // Update selected prompts based on the custom input
+    if (value) {
+      const prompts = value.split(" ").filter((p) => p.trim());
+      setSelectedPrompts(new Set(prompts));
+    } else {
+      setSelectedPrompts(new Set());
     }
   };
 
@@ -241,6 +284,8 @@ function HomePage() {
     setUserInfo(null);
     setTokenInfo(null);
     setError(null);
+    setPrompt("");
+    setSelectedPrompts(new Set());
   };
 
   return (
@@ -394,6 +439,88 @@ function HomePage() {
 
         <Card>
           <CardHeader>
+            <CardTitle>Prompt Parameters</CardTitle>
+            <CardDescription>
+              Configure the prompt parameter for the OAuth authorization
+              request. Toggle individual prompt values to combine them
+              dynamically. The final prompt value will be space-separated.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Prompt Values
+              </label>
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  onClick={() => handlePromptToggle("none")}
+                  variant={selectedPrompts.has("none") ? "default" : "outline"}
+                  size="sm"
+                >
+                  none
+                </Button>
+                <Button
+                  onClick={() => handlePromptToggle("login")}
+                  variant={selectedPrompts.has("login") ? "default" : "outline"}
+                  size="sm"
+                >
+                  login
+                </Button>
+                <Button
+                  onClick={() => handlePromptToggle("consent")}
+                  variant={
+                    selectedPrompts.has("consent") ? "default" : "outline"
+                  }
+                  size="sm"
+                >
+                  consent
+                </Button>
+                <Button
+                  onClick={() => handlePromptToggle("select_account")}
+                  variant={
+                    selectedPrompts.has("select_account")
+                      ? "default"
+                      : "outline"
+                  }
+                  size="sm"
+                >
+                  select_account
+                </Button>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Custom Prompt Value
+              </label>
+              <div className="flex gap-4 items-center">
+                <Input
+                  value={prompt}
+                  onChange={(e) => handlePromptChange(e.target.value)}
+                  placeholder="Enter custom prompt value (e.g., login consent)"
+                  className="flex-1 font-mono text-sm"
+                />
+                <Button
+                  onClick={() => handlePromptChange("")}
+                  variant="secondary"
+                  size="sm"
+                >
+                  Clear
+                </Button>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Current Prompt Value
+              </label>
+              <div className="bg-gray-100 p-2 rounded font-mono text-sm overflow-x-auto">
+                {prompt || "(no prompt)"}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>OAuth Authorization URL Preview</CardTitle>
             <CardDescription>
               This is the URL that will be used for the OAuth authorization
@@ -407,7 +534,8 @@ function HomePage() {
                 state,
                 codeVerifier,
                 codeChallengeMethod,
-                usePKCE
+                usePKCE,
+                prompt
               )}
             </div>
           </CardContent>

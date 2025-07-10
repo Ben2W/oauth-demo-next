@@ -100,6 +100,12 @@ export const tokenStore = {
   set flow(value: OAuthFlow) {
     localStorage.setItem("oauth_flow", value);
   },
+  get prompt() {
+    return localStorage.getItem("oauth_prompt") || "";
+  },
+  set prompt(value: string) {
+    localStorage.setItem("oauth_prompt", value);
+  },
 };
 
 // Reset token store
@@ -111,6 +117,7 @@ export function resetTokenStore() {
   localStorage.removeItem("oauth_state");
   localStorage.removeItem("oauth_state_mode");
   localStorage.removeItem("oauth_flow");
+  localStorage.removeItem("oauth_prompt");
 }
 
 // State management functions
@@ -152,7 +159,8 @@ export function generateAuthUrl(
   state: string,
   codeVerifier: string,
   codeChallengeMethod: "S256" | "plain" | "omit",
-  usePKCE: boolean = true
+  usePKCE: boolean = true,
+  prompt: string = ""
 ) {
   let finalCodeChallenge: string = "";
   let finalCodeVerifier: string = "";
@@ -166,10 +174,11 @@ export function generateAuthUrl(
         : generateCodeChallenge(codeVerifier);
   }
 
-  // Store PKCE and state values
+  // Store PKCE, state, and prompt values
   tokenStore.codeVerifier = finalCodeVerifier;
   tokenStore.state = state;
   tokenStore.flow = flow;
+  tokenStore.prompt = prompt;
 
   const params = new URLSearchParams({
     response_type: "code",
@@ -191,6 +200,11 @@ export function generateAuthUrl(
   }
   // If state is removed, don't add the parameter at all
 
+  // Add prompt parameter if provided
+  if (prompt.trim() !== "") {
+    params.append("prompt", prompt);
+  }
+
   return `${
     process.env.NEXT_PUBLIC_FAPI_URL
   }/oauth/authorize?${params.toString()}`;
@@ -202,7 +216,8 @@ export function generateAuthUrlPreview(
   state: string,
   codeVerifier: string,
   codeChallengeMethod: "S256" | "plain" | "omit",
-  usePKCE: boolean = true
+  usePKCE: boolean = true,
+  prompt: string = ""
 ): string {
   let finalCodeChallenge: string = "";
 
@@ -232,6 +247,11 @@ export function generateAuthUrlPreview(
     params.append("state", state);
   }
   // If state is removed, don't add the parameter at all
+
+  // Add prompt parameter if provided
+  if (prompt.trim() !== "") {
+    params.append("prompt", prompt);
+  }
 
   return `${
     process.env.NEXT_PUBLIC_FAPI_URL
