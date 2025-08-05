@@ -24,7 +24,11 @@ import {
   refreshState,
   removeState,
   isStateRemoved,
+  ClientAuthMethod,
+  getClientAuthHeaders,
+  getClientAuthParams,
 } from "@/lib/oauth";
+import { ClientAuthMethodSelector } from "@/components/ClientAuthMethodSelector";
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
@@ -195,19 +199,20 @@ function HomePage() {
         throw new Error(`No ${tokenType} token available`);
       }
 
+      const authHeaders = getClientAuthHeaders();
+      const authParams = getClientAuthParams();
+
+      const body = new URLSearchParams({ token, ...authParams });
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_FAPI_URL}/oauth/token_info`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
-            Authorization: `Basic ${btoa(
-              `${process.env.NEXT_PUBLIC_CLIENT_ID}:${process.env.NEXT_PUBLIC_CLIENT_SECRET}`
-            )}`,
+            ...authHeaders,
           },
-          body: new URLSearchParams({
-            token,
-          }).toString(),
+          body: body.toString(),
         }
       );
 
@@ -239,20 +244,24 @@ function HomePage() {
         throw new Error(`No ${tokenType} token available`);
       }
 
+      const authHeaders = getClientAuthHeaders();
+      const authParams = getClientAuthParams();
+
+      const body = new URLSearchParams({
+        token,
+        token_type_hint: `${tokenType}_token`,
+        ...authParams,
+      });
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_FAPI_URL}/oauth/token/revoke`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
-            Authorization: `Basic ${btoa(
-              `${process.env.NEXT_PUBLIC_CLIENT_ID}:${process.env.NEXT_PUBLIC_CLIENT_SECRET}`
-            )}`,
+            ...authHeaders,
           },
-          body: new URLSearchParams({
-            token,
-            token_type_hint: `${tokenType}_token`,
-          }).toString(),
+          body: body.toString(),
         }
       );
 
@@ -518,6 +527,8 @@ function HomePage() {
             </div>
           </CardContent>
         </Card>
+
+        <ClientAuthMethodSelector />
 
         <Card>
           <CardHeader>

@@ -56,6 +56,9 @@ export type OAuthFlow = "public" | "confidential";
 // State management types
 export type StateMode = "enabled" | "removed";
 
+// Client authentication method types
+export type ClientAuthMethod = "client_secret_basic" | "client_secret_post";
+
 // Store for tokens (using localStorage)
 export const tokenStore = {
   get accessToken() {
@@ -106,6 +109,13 @@ export const tokenStore = {
   set prompt(value: string) {
     localStorage.setItem("oauth_prompt", value);
   },
+  get clientAuthMethod() {
+    return (localStorage.getItem("oauth_client_auth_method") ||
+      "client_secret_post") as ClientAuthMethod;
+  },
+  set clientAuthMethod(value: ClientAuthMethod) {
+    localStorage.setItem("oauth_client_auth_method", value);
+  },
 };
 
 // Reset token store
@@ -118,6 +128,7 @@ export function resetTokenStore() {
   localStorage.removeItem("oauth_state_mode");
   localStorage.removeItem("oauth_flow");
   localStorage.removeItem("oauth_prompt");
+  localStorage.removeItem("oauth_client_auth_method");
 }
 
 // State management functions
@@ -263,16 +274,19 @@ export function getDefaultTokenExchangeParams(
   code: string
 ): Record<string, string> {
   const params: Record<string, string> = {
-    client_id: process.env.NEXT_PUBLIC_CLIENT_ID!,
     code,
     code_verifier: tokenStore.codeVerifier,
     grant_type: "authorization_code",
     redirect_uri: process.env.NEXT_PUBLIC_REDIRECT_URI!,
   };
 
-  // For confidential clients, add client secret
-  if (tokenStore.flow === "confidential") {
-    params.client_secret = process.env.NEXT_PUBLIC_CLIENT_SECRET!;
+  // Add client authentication based on current method
+  const authParams = getClientAuthParams();
+  Object.assign(params, authParams);
+
+  // Always include client_id (for both auth methods)
+  if (!params.client_id) {
+    params.client_id = process.env.NEXT_PUBLIC_CLIENT_ID!;
   }
 
   return params;
@@ -291,12 +305,16 @@ export async function exchangeCodeForTokens(
     }
   });
 
+  // Get client authentication headers
+  const authHeaders = getClientAuthHeaders();
+
   const response = await fetch(
     `${process.env.NEXT_PUBLIC_FAPI_URL}/oauth/token`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
+        ...authHeaders,
       },
       body: urlParams.toString(),
     }
@@ -330,15 +348,23 @@ export async function refreshAccessToken(): Promise<TokenResponse> {
   }
 
   const params = new URLSearchParams({
-    client_id: process.env.NEXT_PUBLIC_CLIENT_ID!,
     refresh_token: tokenStore.refreshToken,
     grant_type: "refresh_token",
   });
 
-  // For confidential clients, add client secret
-  if (tokenStore.flow === "confidential") {
-    params.append("client_secret", process.env.NEXT_PUBLIC_CLIENT_SECRET!);
+  // Add client authentication based on current method
+  const authParams = getClientAuthParams();
+  Object.entries(authParams).forEach(([key, value]) => {
+    params.append(key, value);
+  });
+
+  // Always include client_id (for both auth methods)
+  if (!authParams.client_id) {
+    params.append("client_id", process.env.NEXT_PUBLIC_CLIENT_ID!);
   }
+
+  // Get client authentication headers
+  const authHeaders = getClientAuthHeaders();
 
   const response = await fetch(
     `${process.env.NEXT_PUBLIC_FAPI_URL}/oauth/token`,
@@ -346,6 +372,7 @@ export async function refreshAccessToken(): Promise<TokenResponse> {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
+        ...authHeaders,
       },
       body: params.toString(),
     }
@@ -390,11 +417,23 @@ export async function getUserInfo(): Promise<UserInfo> {
 // Client credentials flow
 export async function getClientCredentialsToken(): Promise<TokenResponse> {
   const params = new URLSearchParams({
-    client_id: process.env.NEXT_PUBLIC_CLIENT_ID!,
-    client_secret: process.env.NEXT_PUBLIC_CLIENT_SECRET!,
     grant_type: "client_credentials",
     scope: "email profile",
   });
+
+  // Add client authentication based on current method
+  const authParams = getClientAuthParams();
+  Object.entries(authParams).forEach(([key, value]) => {
+    params.append(key, value);
+  });
+
+  // Always include client_id (for both auth methods)
+  if (!authParams.client_id) {
+    params.append("client_id", process.env.NEXT_PUBLIC_CLIENT_ID!);
+  }
+
+  // Get client authentication headers
+  const authHeaders = getClientAuthHeaders();
 
   const response = await fetch(
     `${process.env.NEXT_PUBLIC_FAPI_URL}/oauth/token`,
@@ -402,6 +441,7 @@ export async function getClientCredentialsToken(): Promise<TokenResponse> {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
+        ...authHeaders,
       },
       body: params.toString(),
     }
@@ -418,4 +458,30 @@ export async function getClientCredentialsToken(): Promise<TokenResponse> {
   tokenStore.flow = "confidential";
 
   return data;
+}
+
+// Utility functions for client authentication
+export function getClientAuthHeaders(
+  method: ClientAuthMethod = tokenStore.clientAuthMethod
+): Record<string, string> {
+  if (method === "client_secret_basic") {
+    return {
+      Authorization: `Basic ${btoa(
+        `${process.env.NEXT_PUBLIC_CLIENT_ID}:${process.env.NEXT_PUBLIC_CLIENT_SECRET}`
+      )}`,
+    };
+  }
+  return {};
+}
+
+export function getClientAuthParams(
+  method: ClientAuthMethod = tokenStore.clientAuthMethod
+): Record<string, string> {
+  if (method === "client_secret_post") {
+    return {
+      client_id: process.env.NEXT_PUBLIC_CLIENT_ID!,
+      client_secret: process.env.NEXT_PUBLIC_CLIENT_SECRET!,
+    };
+  }
+  return {};
 }

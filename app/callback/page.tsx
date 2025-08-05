@@ -21,6 +21,7 @@ import {
   getDefaultTokenExchangeParams,
   isStateRemoved,
 } from "@/lib/oauth";
+import { ClientAuthMethodSelector } from "@/components/ClientAuthMethodSelector";
 
 export default function Callback() {
   const router = useRouter();
@@ -227,6 +228,10 @@ export default function Callback() {
                 </Badge>
               )}
             </Alert>
+
+            <div className="mb-6">
+              <ClientAuthMethodSelector />
+            </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="flex gap-2">
