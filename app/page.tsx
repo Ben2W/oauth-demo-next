@@ -24,7 +24,11 @@ import {
   refreshState,
   removeState,
   isStateRemoved,
+  ClientAuthMethod,
+  getClientAuthHeaders,
+  getClientAuthParams,
 } from "@/lib/oauth";
+import { ClientAuthMethodSelector } from "@/components/ClientAuthMethodSelector";
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
@@ -195,19 +199,20 @@ function HomePage() {
         throw new Error(`No ${tokenType} token available`);
       }
 
+      const authHeaders = getClientAuthHeaders();
+      const authParams = getClientAuthParams();
+
+      const body = new URLSearchParams({ token, ...authParams });
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_FAPI_URL}/oauth/token_info`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
-            Authorization: `Basic ${btoa(
-              `${process.env.NEXT_PUBLIC_CLIENT_ID}:${process.env.NEXT_PUBLIC_CLIENT_SECRET}`
-            )}`,
+            ...authHeaders,
           },
-          body: new URLSearchParams({
-            token,
-          }).toString(),
+          body: body.toString(),
         }
       );
 
@@ -239,20 +244,24 @@ function HomePage() {
         throw new Error(`No ${tokenType} token available`);
       }
 
+      const authHeaders = getClientAuthHeaders();
+      const authParams = getClientAuthParams();
+
+      const body = new URLSearchParams({
+        token,
+        token_type_hint: `${tokenType}_token`,
+        ...authParams,
+      });
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_FAPI_URL}/oauth/token/revoke`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
-            Authorization: `Basic ${btoa(
-              `${process.env.NEXT_PUBLIC_CLIENT_ID}:${process.env.NEXT_PUBLIC_CLIENT_SECRET}`
-            )}`,
+            ...authHeaders,
           },
-          body: new URLSearchParams({
-            token,
-            token_type_hint: `${tokenType}_token`,
-          }).toString(),
+          body: body.toString(),
         }
       );
 
@@ -519,6 +528,8 @@ function HomePage() {
           </CardContent>
         </Card>
 
+        <ClientAuthMethodSelector />
+
         <Card>
           <CardHeader>
             <CardTitle>OAuth Authorization URL Preview</CardTitle>
@@ -643,25 +654,25 @@ function HomePage() {
                 {tokens.accessToken && (
                   <div>
                     <h3 className="font-semibold mb-2">Access Token</h3>
-                    <pre className="bg-gray-100 p-2 rounded overflow-x-auto">
+                    <div className="bg-gray-100 p-2 rounded font-mono text-sm break-all whitespace-pre-wrap">
                       {tokens.accessToken}
-                    </pre>
+                    </div>
                   </div>
                 )}
                 {tokens.refreshToken && (
                   <div>
                     <h3 className="font-semibold mb-2">Refresh Token</h3>
-                    <pre className="bg-gray-100 p-2 rounded overflow-x-auto">
+                    <div className="bg-gray-100 p-2 rounded font-mono text-sm break-all whitespace-pre-wrap">
                       {tokens.refreshToken}
-                    </pre>
+                    </div>
                   </div>
                 )}
                 {tokens.idToken && (
                   <div>
                     <h3 className="font-semibold mb-2">ID Token</h3>
-                    <pre className="bg-gray-100 p-2 rounded overflow-x-auto">
+                    <div className="bg-gray-100 p-2 rounded font-mono text-sm break-all whitespace-pre-wrap">
                       {tokens.idToken}
-                    </pre>
+                    </div>
                   </div>
                 )}
               </div>
@@ -678,9 +689,9 @@ function HomePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <pre className="bg-gray-100 p-2 rounded overflow-x-auto">
+              <div className="bg-gray-100 p-2 rounded font-mono text-sm break-all whitespace-pre-wrap">
                 {JSON.stringify(tokenInfo, null, 2)}
-              </pre>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -694,9 +705,9 @@ function HomePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <pre className="bg-gray-100 p-2 rounded overflow-x-auto">
+              <div className="bg-gray-100 p-2 rounded font-mono text-sm break-all whitespace-pre-wrap">
                 {JSON.stringify(userInfo, null, 2)}
-              </pre>
+              </div>
             </CardContent>
           </Card>
         )}
