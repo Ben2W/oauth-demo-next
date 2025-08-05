@@ -654,25 +654,25 @@ function HomePage() {
                 {tokens.accessToken && (
                   <div>
                     <h3 className="font-semibold mb-2">Access Token</h3>
-                    <pre className="bg-gray-100 p-2 rounded overflow-x-auto">
+                    <div className="bg-gray-100 p-2 rounded font-mono text-sm break-all whitespace-pre-wrap">
                       {tokens.accessToken}
-                    </pre>
+                    </div>
                   </div>
                 )}
                 {tokens.refreshToken && (
                   <div>
                     <h3 className="font-semibold mb-2">Refresh Token</h3>
-                    <pre className="bg-gray-100 p-2 rounded overflow-x-auto">
+                    <div className="bg-gray-100 p-2 rounded font-mono text-sm break-all whitespace-pre-wrap">
                       {tokens.refreshToken}
-                    </pre>
+                    </div>
                   </div>
                 )}
                 {tokens.idToken && (
                   <div>
                     <h3 className="font-semibold mb-2">ID Token</h3>
-                    <pre className="bg-gray-100 p-2 rounded overflow-x-auto">
+                    <div className="bg-gray-100 p-2 rounded font-mono text-sm break-all whitespace-pre-wrap">
                       {tokens.idToken}
-                    </pre>
+                    </div>
                   </div>
                 )}
               </div>
@@ -689,9 +689,9 @@ function HomePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <pre className="bg-gray-100 p-2 rounded overflow-x-auto">
+              <div className="bg-gray-100 p-2 rounded font-mono text-sm break-all whitespace-pre-wrap">
                 {JSON.stringify(tokenInfo, null, 2)}
-              </pre>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -705,9 +705,9 @@ function HomePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <pre className="bg-gray-100 p-2 rounded overflow-x-auto">
+              <div className="bg-gray-100 p-2 rounded font-mono text-sm break-all whitespace-pre-wrap">
                 {JSON.stringify(userInfo, null, 2)}
-              </pre>
+              </div>
             </CardContent>
           </Card>
         )}
