@@ -109,6 +109,12 @@ export const tokenStore = {
   set prompt(value: string) {
     localStorage.setItem("oauth_prompt", value);
   },
+  get scopes() {
+    return localStorage.getItem("oauth_scopes") || "email profile openid";
+  },
+  set scopes(value: string) {
+    localStorage.setItem("oauth_scopes", value);
+  },
   get clientAuthMethod() {
     return (localStorage.getItem("oauth_client_auth_method") ||
       "client_secret_post") as ClientAuthMethod;
@@ -128,6 +134,7 @@ export function resetTokenStore() {
   localStorage.removeItem("oauth_state_mode");
   localStorage.removeItem("oauth_flow");
   localStorage.removeItem("oauth_prompt");
+  localStorage.removeItem("oauth_scopes");
   localStorage.removeItem("oauth_client_auth_method");
 }
 
@@ -195,7 +202,7 @@ export function generateAuthUrl(
     response_type: "code",
     client_id: process.env.NEXT_PUBLIC_CLIENT_ID!,
     redirect_uri: process.env.NEXT_PUBLIC_REDIRECT_URI!,
-    scope: "email profile",
+    scope: tokenStore.scopes || "email profile openid",
   });
 
   // Only add PKCE parameters if enabled and not omitted
@@ -243,7 +250,7 @@ export function generateAuthUrlPreview(
     response_type: "code",
     client_id: process.env.NEXT_PUBLIC_CLIENT_ID!,
     redirect_uri: process.env.NEXT_PUBLIC_REDIRECT_URI!,
-    scope: "email profile",
+    scope: tokenStore.scopes || "email profile openid",
   });
 
   // Only add PKCE parameters if enabled and not omitted
@@ -418,7 +425,7 @@ export async function getUserInfo(): Promise<UserInfo> {
 export async function getClientCredentialsToken(): Promise<TokenResponse> {
   const params = new URLSearchParams({
     grant_type: "client_credentials",
-    scope: "email profile",
+    scope: tokenStore.scopes || "email profile openid",
   });
 
   // Add client authentication based on current method

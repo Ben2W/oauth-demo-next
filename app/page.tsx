@@ -58,6 +58,8 @@ function HomePage() {
   const [selectedPrompts, setSelectedPrompts] = useState<Set<string>>(
     new Set()
   );
+  const [scopes, setScopes] = useState(tokenStore.scopes);
+  const [selectedScopes, setSelectedScopes] = useState<Set<string>>(new Set());
 
   // Initialize state from localStorage on component mount
   useEffect(() => {
@@ -65,11 +67,18 @@ function HomePage() {
     setState(initialState);
     setStateRemoved(isStateRemoved());
     setPrompt(tokenStore.prompt);
+    setScopes(tokenStore.scopes);
 
     // Initialize selected prompts from stored prompt value
     if (tokenStore.prompt) {
       const prompts = tokenStore.prompt.split(" ").filter((p) => p.trim());
       setSelectedPrompts(new Set(prompts));
+    }
+
+    // Initialize selected scopes from stored scopes value
+    if (tokenStore.scopes) {
+      const scopesArr = tokenStore.scopes.split(" ").filter((s) => s.trim());
+      setSelectedScopes(new Set(scopesArr));
     }
   }, []);
 
@@ -159,6 +168,34 @@ function HomePage() {
       setSelectedPrompts(new Set(prompts));
     } else {
       setSelectedPrompts(new Set());
+    }
+  };
+
+  const handleScopeToggle = (scopeValue: string) => {
+    const newSelectedScopes = new Set(selectedScopes);
+
+    if (newSelectedScopes.has(scopeValue)) {
+      newSelectedScopes.delete(scopeValue);
+    } else {
+      newSelectedScopes.add(scopeValue);
+    }
+
+    setSelectedScopes(newSelectedScopes);
+
+    const combinedScopes = Array.from(newSelectedScopes).sort().join(" ");
+    setScopes(combinedScopes);
+    tokenStore.scopes = combinedScopes;
+  };
+
+  const handleScopesChange = (value: string) => {
+    setScopes(value);
+    tokenStore.scopes = value;
+
+    if (value) {
+      const scopesArr = value.split(" ").filter((s) => s.trim());
+      setSelectedScopes(new Set(scopesArr));
+    } else {
+      setSelectedScopes(new Set());
     }
   };
 
@@ -295,6 +332,10 @@ function HomePage() {
     setError(null);
     setPrompt("");
     setSelectedPrompts(new Set());
+    setScopes(tokenStore.scopes);
+    setSelectedScopes(
+      new Set(tokenStore.scopes.split(" ").filter((s) => s.trim()))
+    );
   };
 
   return (
@@ -523,6 +564,76 @@ function HomePage() {
               </label>
               <div className="bg-gray-100 p-2 rounded font-mono text-sm overflow-x-auto">
                 {prompt || "(no prompt)"}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Scopes</CardTitle>
+            <CardDescription>
+              Select scopes to include in the OAuth request. You can toggle
+              common scopes or enter a custom space-separated list.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Common Scopes
+              </label>
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  onClick={() => handleScopeToggle("openid")}
+                  variant={selectedScopes.has("openid") ? "default" : "outline"}
+                  size="sm"
+                >
+                  openid
+                </Button>
+                <Button
+                  onClick={() => handleScopeToggle("profile")}
+                  variant={
+                    selectedScopes.has("profile") ? "default" : "outline"
+                  }
+                  size="sm"
+                >
+                  profile
+                </Button>
+                <Button
+                  onClick={() => handleScopeToggle("email")}
+                  variant={selectedScopes.has("email") ? "default" : "outline"}
+                  size="sm"
+                >
+                  email
+                </Button>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Custom Scopes
+              </label>
+              <div className="flex gap-4 items-center">
+                <Input
+                  value={scopes}
+                  onChange={(e) => handleScopesChange(e.target.value)}
+                  placeholder="Enter scopes (e.g., openid profile email)"
+                  className="flex-1 font-mono text-sm"
+                />
+                <Button
+                  onClick={() => handleScopesChange("")}
+                  variant="secondary"
+                  size="sm"
+                >
+                  Clear
+                </Button>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Current Scope Value
+              </label>
+              <div className="bg-gray-100 p-2 rounded font-mono text-sm overflow-x-auto">
+                {scopes || "(no scopes)"}
               </div>
             </div>
           </CardContent>
