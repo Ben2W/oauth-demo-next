@@ -47,7 +47,7 @@ export interface UserInfo {
   email?: string;
   name?: string;
   picture?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // OAuth flow types
@@ -230,13 +230,15 @@ export function generateAuthUrl(
 
 // Generate preview URL for display purposes
 export function generateAuthUrlPreview(
-  flow: OAuthFlow = "public",
+  _flow: OAuthFlow = "public",
   state: string,
   codeVerifier: string,
   codeChallengeMethod: "S256" | "plain" | "omit",
   usePKCE: boolean = true,
   prompt: string = ""
 ): string {
+  // Mark parameter as intentionally unused while keeping API surface
+  void _flow;
   let finalCodeChallenge: string = "";
 
   if (usePKCE && codeChallengeMethod !== "omit") {
@@ -333,7 +335,7 @@ export async function exchangeCodeForTokens(
       throw new Error(
         JSON.stringify(errorData) || "Failed to exchange code for tokens"
       );
-    } catch (parseError) {
+    } catch {
       throw new Error("Failed to exchange code for tokens");
     }
   }

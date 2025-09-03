@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Card,
@@ -23,7 +23,7 @@ import {
 } from "@/lib/oauth";
 import { ClientAuthMethodSelector } from "@/components/ClientAuthMethodSelector";
 
-export default function Callback() {
+function CallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
@@ -218,7 +218,7 @@ export default function Callback() {
                     Included
                   </Badge>
                   <code className="text-xs bg-muted px-2 py-1 rounded break-all overflow-wrap-anywhere">
-                    "{state}"
+                    &quot;{state}&quot;
                   </code>
                 </div>
               ) : (
@@ -303,4 +303,24 @@ export default function Callback() {
   }
 
   return null;
+}
+
+export default function Callback() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-muted">
+          <Card className="w-full max-w-lg">
+            <CardContent className="py-8 text-center">
+              <p className="text-lg text-muted-foreground">
+                Processing OAuth callback...
+              </p>
+            </CardContent>
+          </Card>
+        </main>
+      }
+    >
+      <CallbackInner />
+    </Suspense>
+  );
 }

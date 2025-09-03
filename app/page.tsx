@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -24,10 +25,10 @@ import {
   refreshState,
   removeState,
   isStateRemoved,
-  ClientAuthMethod,
   getClientAuthHeaders,
   getClientAuthParams,
 } from "@/lib/oauth";
+import type { UserInfo } from "@/lib/oauth";
 import { ClientAuthMethodSelector } from "@/components/ClientAuthMethodSelector";
 
 export default function Home() {
@@ -41,10 +42,12 @@ export default function Home() {
 
 function HomePage() {
   const [tokens, setTokens] = useState(tokenStore);
-  const [userInfo, setUserInfo] = useState<any>(null);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tokenInfo, setTokenInfo] = useState<any>(null);
+  const [tokenInfo, setTokenInfo] = useState<Record<string, unknown> | null>(
+    null
+  );
   const [state, setState] = useState("");
   const [stateRemoved, setStateRemoved] = useState(isStateRemoved());
   const [codeVerifier, setCodeVerifier] = useState(() =>
@@ -60,6 +63,7 @@ function HomePage() {
   );
   const [scopes, setScopes] = useState(tokenStore.scopes);
   const [selectedScopes, setSelectedScopes] = useState<Set<string>>(new Set());
+  const [submitViaForm, setSubmitViaForm] = useState(false);
 
   // Initialize state from localStorage on component mount
   useEffect(() => {
@@ -95,15 +99,66 @@ function HomePage() {
   };
 
   const handleConfidentialClient = () => {
-    const authUrl = generateAuthUrl(
-      "confidential",
-      state,
-      codeVerifier,
-      codeChallengeMethod,
-      usePKCE,
-      prompt
-    );
-    window.location.href = authUrl;
+    if (!submitViaForm) {
+      const authUrl = generateAuthUrl(
+        "confidential",
+        state,
+        codeVerifier,
+        codeChallengeMethod,
+        usePKCE,
+        prompt
+      );
+      window.location.href = authUrl;
+      return;
+    }
+
+    // Store current flow-related values similar to generateAuthUrl
+    tokenStore.codeVerifier =
+      usePKCE && codeChallengeMethod !== "omit" ? codeVerifier : "";
+    tokenStore.state = state;
+    tokenStore.flow = "confidential";
+    tokenStore.prompt = prompt;
+
+    // Build params for POSTing to /oauth/authorize
+    const params = new URLSearchParams({
+      response_type: "code",
+      client_id: process.env.NEXT_PUBLIC_CLIENT_ID!,
+      redirect_uri: process.env.NEXT_PUBLIC_REDIRECT_URI!,
+      scope: tokenStore.scopes || "email profile openid",
+    });
+
+    if (usePKCE && codeChallengeMethod !== "omit") {
+      const challenge =
+        codeChallengeMethod === "plain"
+          ? codeVerifier
+          : generateCodeChallenge(codeVerifier);
+      params.append("code_challenge", challenge);
+      params.append("code_challenge_method", codeChallengeMethod);
+    }
+
+    if (!isStateRemoved()) {
+      params.append("state", state);
+    }
+
+    if (prompt.trim() !== "") {
+      params.append("prompt", prompt);
+    }
+
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = `${process.env.NEXT_PUBLIC_FAPI_URL}/oauth/authorize`;
+
+    Array.from(params.entries()).forEach(([name, value]) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = name;
+      input.value = value;
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
   };
 
   const handleRefreshState = () => {
@@ -672,13 +727,23 @@ function HomePage() {
               server.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex gap-4 flex-wrap">
+          <CardContent className="flex gap-4 flex-wrap items-center">
             <Button onClick={handlePublicClient} disabled={loading}>
               Public Client Flow
             </Button>
             <Button onClick={handleConfidentialClient} disabled={loading}>
               Confidential Client Flow
             </Button>
+            <Label htmlFor="submitViaForm" className="text-sm">
+              <input
+                id="submitViaForm"
+                type="checkbox"
+                className="h-4 w-4 mr-2"
+                checked={submitViaForm}
+                onChange={(e) => setSubmitViaForm(e.target.checked)}
+              />
+              Submit via HTML form
+            </Label>
           </CardContent>
         </Card>
 
